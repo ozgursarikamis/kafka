@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: apache/kafka:${KAFKA_VERSION}
+    container_name: kafka_kraft
+    ports:
+      - "${KAFKA_EXTERNAL_PORT}:9092"
+    environment:
+      # Identify the node and its dual role (Broker + Controller)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      
+      # Define listeners: 
+      # - CONTROLLER for internal quorum voting
+      # - INTERNAL for inter-broker communication within Docker network
+      # - EXTERNAL for your local apps/tools outside the Docker network
+      KAFKA_LISTENERS: 'CONTROLLER://:9093,INTERNAL://:29092,EXTERNAL://:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka:29092,EXTERNAL://${KAFKA_EXTERNAL_HOST}:${KAFKA_EXTERNAL_PORT}'
+      
+      # Security protocols mapping
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      
+      # KRaft Quorum setup: points to itself since it is a single-node cluster
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@localhost:9093'
+      
+      # Unique Cluster ID required for KRaft formatting
+      # Generated statically here for easy local development
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+      
+      # Auto-create topics for quick testing
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+volumes:
+  kafka_data:
+    driver: local
